@@ -14,16 +14,18 @@ db.init_app(app)
 CORS(app)
 
 
-# 用app的密码加密 token
+# 用app的密码加密 token 设置超时时间
 serializer = Serializer(app.config['SECRET_KEY'], expires_in=1800)
+# 用于添加资源
 api = Api(app)
 
-# token登陆
+# token登陆 有两中方式这是其中的一种
 auth = HTTPTokenAuth(scheme='Bearer')
 # 注册
 @app.route('/api/Account/Register',methods=["POST"])
 def register():
     print("register 被调用")
+    # json 不知道为什么一直读取不到
     print(request.json)
     username = request.form['email']
     password = request.form['password']
@@ -32,10 +34,11 @@ def register():
     print(username)
     print(password)
     print(comfirm_password)
+    # 这里其实少了表单验证的东西 这样写不太安全吧
     newUser=Users(request.form['email'],request.form['password'])
     db.session.add(newUser)
     db.session.commit()
-    print('执行道这里')
+    print('添加新用户成功')
     return (jsonify({'username': newUser.username}), 201)
 
 # 登陆并获取token
@@ -48,7 +51,7 @@ def login():
     row=Users.query.filter_by(username=username).first()
     if row == None or row.password != password:
         abort(400)
-    # 设置token
+    # 账户和密码正确以后 换取token
     access_token = serializer.dumps({'id':username})
     print(access_token)
     return jsonify({'access_token': access_token.decode('ascii'),'userName':username,'duration': 1800})
@@ -60,7 +63,7 @@ def logout():
     return ('',204)
 
 
-#在访问受保护的资源的时候 会去sessionStorage里面读取accessToken
+#在访问受保护的资源的时候 会去sessionStorage里面读取accessToken 如果被return false就不能登陆失败了
 @auth.verify_token
 def verify_token(token):
     g.user = None
@@ -102,7 +105,7 @@ resource_fields = {
 @app.route('/api/Values')
 @auth.login_required
 def protected():
-    return jsonify({'sercert':'123456'}),200
+    return jsonify({'sercert':'帮我加个star吧'}),200
 
 # 一个增删改查应用需要两个class才能搞定 一个带参数的一个不带
 # 不带参数的提供所有记录查询和记录新增的功能
